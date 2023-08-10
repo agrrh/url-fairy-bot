@@ -11,6 +11,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 USER_ID = int(os.getenv("USER_ID"))
 CHAT_ID = int(os.getenv("CHAT_ID"))
 
+CACHE_DIR = "video_cache"
+
 def start(update, context):
     update.message.reply_text("Hello! I'm your bot. Send me a message!")
 
@@ -19,9 +21,12 @@ def follow_redirects(url):
     clean_url = urlunparse(urlparse(response.url)._replace(query=''))
     return clean_url
 
+def sanitize_filename(filename):
+    return "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in filename)
+
 def download_tiktok_video(url):
     ydl_opts = {
-        'outtmpl': 'downloaded_video.mp4',
+        'outtmpl': os.path.join(CACHE_DIR, sanitize_filename(url) + '.mp4'),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
@@ -34,16 +39,14 @@ def forward_message(update, context):
             clean_url = follow_redirects(message_text)
 
             if "tiktok" in clean_url:
-                download_tiktok_video(clean_url)
-                file_size_mb = os.path.getsize("downloaded_video.mp4") / (1024 * 1024)
-                if file_size_mb > 20:
-                    update.message.reply_text("Error: Downloaded file is too large (over 20 MB).")
-                    os.remove("downloaded_video.mp4")
-                    return  # Exit the function here to prevent further actions
-                else:
-                    with open("downloaded_video.mp4", "rb") as video_file:
+                video_path = os.path.join(CACHE_DIR, sanitize_filename(clean_url) + '.mp4')
+                if os.path.exists(video_path):
+                    with open(video_path, "rb") as video_file:
                         context.bot.send_video(chat_id=CHAT_ID, video=video_file, caption=clean_url)
-                    os.remove("downloaded_video.mp4")
+                else:
+                    download_tiktok_video(clean_url)
+                    with open(video_path, "rb") as video_file:
+                        context.bot.send_video(chat_id=CHAT_ID, video=video_file, caption=clean_url)
             else:
                 context.bot.send_message(chat_id=CHAT_ID, text=clean_url)
 
@@ -55,6 +58,9 @@ def forward_message(update, context):
         update.message.reply_text("Sorry, you are not authorized to use this bot.")
 
 def main():
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+
     updater = Updater(token=BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
