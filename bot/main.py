@@ -8,14 +8,16 @@ from aiogram.utils import executor
 
 # Load environment variables from .env file
 load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
 ALLOWED_USER_IDS = os.getenv("ALLOWED_USER_IDS")
+BASE_URL = os.getenv("BASE_URL")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CACHE_DIR = "/video_cache"
+
 if ALLOWED_USER_IDS == "*":
     ALLOWED_USER_IDS = []  # An empty list means anyone is allowed
 else:
     ALLOWED_USER_IDS = [int(id) for id in ALLOWED_USER_IDS.split(",")]
 
-CACHE_DIR = "video_cache"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
@@ -42,19 +44,26 @@ async def yt_dlp_download(url):
 async def forward_message(message: types.Message):
     if not ALLOWED_USER_IDS or message.from_user.id in ALLOWED_USER_IDS:
         message_text = message.text
-
         if message_text.startswith("http") or message_text.startswith("www"):
             clean_url = follow_redirects(message_text)
-
             if "tiktok" in clean_url:
+                file_link = f"https://{BASE_URL}/{sanitize_filename(clean_url)}.mp4"
                 video_path = os.path.join(CACHE_DIR, sanitize_filename(clean_url) + '.mp4')
                 if os.path.exists(video_path):
-                    with open(video_path, "rb") as video_file:
-                        await message.reply_video(video_file, caption=clean_url)
+                    file_size = os.path.getsize(video_path)
+                    if file_size <= 20 * 1024 * 1024:  # 20 MB
+                        with open(video_path, "rb") as video_file:
+                            await message.reply_video(video_file, caption=clean_url)
+                    else:
+                        await message.reply(f"Sorry, the attachment file is too big.\nOriginal URL is {clean_url}\nUse this link to download the file:\n{file_link}")
                 else:
                     await yt_dlp_download(clean_url)
-                    with open(video_path, "rb") as video_file:
-                        await message.reply_video(video_file, caption=clean_url)
+                    file_size = os.path.getsize(video_path)
+                    if file_size <= 20 * 1024 * 1024:  # 20 MB
+                        with open(video_path, "rb") as video_file:
+                            await message.reply_video(video_file, caption=clean_url)
+                    else:
+                        await message.reply(f"Sorry, the attachment file is too big. Use this link to download the file:\n{file_link}")
             else:
                 await message.reply(clean_url)
 
@@ -71,3 +80,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

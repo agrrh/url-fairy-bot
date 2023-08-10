@@ -1,0 +1,60 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - created
+
+env:
+  DOCKERHUB_USERNAME: nett00n
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Determine Git tag
+        id: git-tag
+        run: echo "::set-output name=tag::$(git describe --exact-match --tags HEAD || echo '')"
+
+      - name: Set tag if empty or invalid
+        id: set-tag
+        run: |
+          if [ -z "${{ steps.git-tag.outputs.tag }}" ]; then
+            echo "::set-output name=tag::latest"
+          elif [[ "${{ steps.git-tag.outputs.tag }}" == *" "* ]]; then
+            echo "::set-output name=tag::latest"
+          else
+            echo "::set-output name=tag::${{ steps.git-tag.outputs.tag }}"
+          fi
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/tgvideobot:latest
+            ${{ env.DOCKERHUB_USERNAME }}/tgvideobot:${{ github.sha }}
+            ${{ env.DOCKERHUB_USERNAME }}/tgvideobot:${{ steps.set-tag.outputs.tag }}
+
