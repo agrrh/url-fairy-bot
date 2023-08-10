@@ -1,5 +1,6 @@
 import os
 import requests
+import yt_dlp
 from urllib.parse import urlparse, urlunparse
 from dotenv import load_dotenv
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -18,14 +19,35 @@ def follow_redirects(url):
     clean_url = urlunparse(urlparse(response.url)._replace(query=''))
     return clean_url
 
+def download_tiktok_video(url):
+    ydl_opts = {
+        'outtmpl': 'downloaded_video.mp4',
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
 def forward_message(update, context):
     if update.message.from_user.id == USER_ID:
         message_text = update.message.text
 
         if message_text.startswith("http") or message_text.startswith("www"):
             clean_url = follow_redirects(message_text)
-            context.bot.send_message(chat_id=CHAT_ID, text=clean_url)
-            update.message.reply_text("Cleaned link has been forwarded to the selected channel.")
+            
+            if "tiktok" in clean_url:
+                download_tiktok_video(clean_url)
+                file_size_mb = os.path.getsize("downloaded_video.mp4") / (1024 * 1024)
+                if file_size_mb > 20:
+                    update.message.reply_text("Error: Downloaded file is too large (over 20 MB).")
+                    os.remove("downloaded_video.mp4")
+                    return  # Exit the function here to prevent further actions
+                else:
+                    with open("downloaded_video.mp4", "rb") as video_file:
+                        context.bot.send_video(chat_id=CHAT_ID, video=video_file, caption=clean_url)
+                    os.remove("downloaded_video.mp4")
+            else:
+                context.bot.send_message(chat_id=CHAT_ID, text=clean_url)
+                
+            update.message.reply_text("Content has been forwarded to the selected channel.")
         else:
             context.bot.send_message(chat_id=CHAT_ID, text=message_text)
             update.message.reply_text("Your message has been forwarded to the selected channel.")
