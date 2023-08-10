@@ -1,5 +1,6 @@
 import os
 import requests
+from urllib.parse import urlparse, urlunparse
 from dotenv import load_dotenv
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -14,7 +15,8 @@ def start(update, context):
 
 def follow_redirects(url):
     response = requests.head(url, allow_redirects=True)
-    return response.url
+    clean_url = urlunparse(urlparse(response.url)._replace(query=''))
+    return clean_url
 
 def forward_message(update, context):
     if update.message.from_user.id == USER_ID:
