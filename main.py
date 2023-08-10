@@ -32,7 +32,7 @@ def forward_message(update, context):
 
         if message_text.startswith("http") or message_text.startswith("www"):
             clean_url = follow_redirects(message_text)
-            
+
             if "tiktok" in clean_url:
                 download_tiktok_video(clean_url)
                 file_size_mb = os.path.getsize("downloaded_video.mp4") / (1024 * 1024)
@@ -46,7 +46,7 @@ def forward_message(update, context):
                     os.remove("downloaded_video.mp4")
             else:
                 context.bot.send_message(chat_id=CHAT_ID, text=clean_url)
-                
+
             update.message.reply_text("Content has been forwarded to the selected channel.")
         else:
             context.bot.send_message(chat_id=CHAT_ID, text=message_text)
