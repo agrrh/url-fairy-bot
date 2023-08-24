@@ -1,7 +1,7 @@
 import os
 import requests
 import yt_dlp
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, parse_qs
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
@@ -13,69 +13,95 @@ BASE_URL = os.getenv("BASE_URL")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CACHE_DIR = "/video_cache"
 
-if ALLOWED_USER_IDS == "*":
-    ALLOWED_USER_IDS = []  # An empty list means anyone is allowed
-else:
-    ALLOWED_USER_IDS = [int(id) for id in ALLOWED_USER_IDS.split(",")]
-
+# Convert ALLOWED_USER_IDS to a list of integers
+ALLOWED_USER_IDS = [] if ALLOWED_USER_IDS == "*" else [int(id) for id in ALLOWED_USER_IDS.split(",")]
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
+# Command handler for the /start command
 async def start(message: types.Message):
-    await message.reply("Hello! I'm your bot. Send me a message!")
+    await message.reply("Hello! I'm your friendly URLFairyBot. Send me a URL to clean and extract data!")
 
+# Function to follow redirects and retrieve the clean URL
 def follow_redirects(url):
     response = requests.head(url, allow_redirects=True)
-    clean_url = urlunparse(urlparse(response.url)._replace(query=''))
-    return clean_url
+    return urlunparse(urlparse(response.url)._replace(query=''))
 
+# Function to sanitize a filename for the cached video
 def sanitize_filename(filename):
     return "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in filename)
 
+# Function to download a video using yt_dlp
 async def yt_dlp_download(url):
-    ydl_opts = {
-        'outtmpl': os.path.join(CACHE_DIR, sanitize_filename(url) + '.mp4'),
-    }
+    ydl_opts = {'outtmpl': os.path.join(CACHE_DIR, sanitize_filename(url) + '.mp4')}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
+# Function to handle sending large video
+async def send_large_video(message, clean_url, file_link):
+    await message.reply(f"Sorry, the attachment file is too big.\nOriginal URL: {clean_url}\nUse this link to download the file:\n{file_link}")
+
+# Function to check if video is within size limits
+def is_within_size_limit(video_path):
+    file_size = os.path.getsize(video_path)
+    return file_size <= 20 * 1024 * 1024  # 20 MB
+
+# Handler for processing incoming messages
 @dp.message_handler(content_types=[types.ContentType.TEXT])
-async def forward_message(message: types.Message):
+async def process_message(message: types.Message):
     if not ALLOWED_USER_IDS or message.from_user.id in ALLOWED_USER_IDS:
-        message_text = message.text
-        if message_text.startswith("http") or message_text.startswith("www"):
+        message_text = message.text.strip()
+
+        if message_text.startswith(("http", "www")):
             clean_url = follow_redirects(message_text)
+            video_path = os.path.join(CACHE_DIR, sanitize_filename(clean_url) + '.mp4')
+            file_link = f"https://{BASE_URL}/{sanitize_filename(clean_url)}.mp4"
+
             if "tiktok" in clean_url:
-                file_link = f"https://{BASE_URL}/{sanitize_filename(clean_url)}.mp4"
-                video_path = os.path.join(CACHE_DIR, sanitize_filename(clean_url) + '.mp4')
+                clean_url = clean_tiktok_url(clean_url)
                 if os.path.exists(video_path):
-                    file_size = os.path.getsize(video_path)
-                    if file_size <= 20 * 1024 * 1024:  # 20 MB
+                    if is_within_size_limit(video_path):
                         with open(video_path, "rb") as video_file:
                             await message.reply_video(video_file, caption=clean_url)
                     else:
-                        await message.reply(f"Sorry, the attachment file is too big.\nOriginal URL is {clean_url}\nUse this link to download the file:\n{file_link}")
+                        await send_large_video(message, clean_url, file_link)
                 else:
-                    await yt_dlp_download(clean_url)
-                    file_size = os.path.getsize(video_path)
-                    if file_size <= 20 * 1024 * 1024:  # 20 MB
-                        with open(video_path, "rb") as video_file:
-                            await message.reply_video(video_file, caption=clean_url)
-                    else:
-                        await message.reply(f"Sorry, the attachment file is too big. Use this link to download the file:\n{file_link}")
+                    await yt_dlp_download_and_send(clean_url, message)
             else:
                 await message.reply(clean_url)
-
         else:
             await message.reply(message_text)
     else:
         await message.reply("Sorry, you are not authorized to use this bot.")
 
-def main():
-    if not os.path.exists(CACHE_DIR):
-        os.makedirs(CACHE_DIR)
+# Function to download a video using yt_dlp and send it
+async def yt_dlp_download_and_send(clean_url, message):
+    video_path = os.path.join(CACHE_DIR, sanitize_filename(clean_url) + '.mp4')
+    await yt_dlp_download(clean_url)
 
+    if is_within_size_limit(video_path):
+        with open(video_path, "rb") as video_file:
+            await message.reply_video(video_file, caption=clean_url)
+    else:
+        file_link = f"https://{BASE_URL}/{sanitize_filename(clean_url)}.mp4"
+        await send_large_video(message, clean_url, file_link)
+
+# Function to clean TikTok video URL
+def clean_tiktok_url(url):
+    parsed_url = urlparse(url)
+    video_id = parse_qs(parsed_url.query).get('video_id')
+    if video_id:
+        clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}?video_id={video_id[0]}"
+        return clean_url
+    return url
+
+# Main function to start the bot
+def main():
+    # Create the cache directory if it doesn't exist
+    os.makedirs(CACHE_DIR, exist_ok=True)
+
+    # Start the bot using the Dispatcher
     executor.start_polling(dp, skip_updates=True)
 
 if __name__ == "__main__":

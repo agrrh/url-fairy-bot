@@ -16,20 +16,20 @@ services:
         max-size: "1m"
     volumes:
       - video_cache:/video_cache
-  server:
-    build: server/
+  nginx:
+    image: nginx:latest
     environment:
       BASE_URL: $BASE_URL
     labels:
       com.centurylinklabs.watchtower.enable: "true"
       traefik.docker.network: traefik_default
       traefik.enable: true
-      traefik.http.routers.jellyfin.entrypoints: websecure
-      traefik.http.routers.jellyfin.rule: Host(`$BASE_URL`)
-      traefik.http.routers.jellyfin.service: jellyfin
-      traefik.http.routers.jellyfin.tls: true
-      traefik.http.routers.jellyfin.tls.certresolver: le
-      traefik.http.services.jellyfin.loadbalancer.server.port: 80
+      traefik.http.routers.url-fairy-bot.entrypoints: websecure
+      traefik.http.routers.url-fairy-bot.rule: Host(`$BASE_URL`)
+      traefik.http.routers.url-fairy-bot.service: url-fairy-bot
+      traefik.http.routers.url-fairy-bot.tls: true
+      traefik.http.routers.url-fairy-bot.tls.certresolver: le
+      traefik.http.services.url-fairy-bot.loadbalancer.server.port: 80
     logging:
       driver: "json-file"
       options:
@@ -39,10 +39,14 @@ services:
       - traefik_default
     volumes:
       - video_cache:/video_cache:ro
+      - ./nginx/conf.d/:/etc/nginx/conf.d
   cron:
-    build: cron/
+    image: busybox:latest
     volumes:
       - video_cache:/video_cache
+    command: watch -n 60 'find /video_cache/ -type f -amin +1440 -delete' > /dev/null
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     logging:
       driver: "json-file"
       options:
@@ -51,4 +55,3 @@ services:
 version: "3"
 volumes:
   video_cache:
-
