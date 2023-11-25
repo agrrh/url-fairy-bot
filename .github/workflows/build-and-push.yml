@@ -57,4 +57,3 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/tgvideobot:latest
             ${{ env.DOCKERHUB_USERNAME }}/tgvideobot:${{ github.sha }}
             ${{ env.DOCKERHUB_USERNAME }}/tgvideobot:${{ steps.set-tag.outputs.tag }}
-
