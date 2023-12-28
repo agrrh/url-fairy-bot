@@ -34,6 +34,7 @@ Prepare for a magical journey as you set up and deploy the URLFairyBot.
    ```
 
 3. Do not forget to create a traefik reverse proxy `docker-compose.yml` file:
+
    ```yaml
    ---
    version: "3"
@@ -72,7 +73,7 @@ Prepare for a magical journey as you set up and deploy the URLFairyBot.
 
 4. Brew your concoction of Docker spells to awaken the bot:
 
-   ```bash
+   ```shell
    docker-compose up -d
    ```
 
