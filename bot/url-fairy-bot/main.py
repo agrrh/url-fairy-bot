@@ -171,7 +171,6 @@ async def process_message(message: types.Message):
     ):  # Only send error messages if valid URLs exist
         await message.reply("\n".join(error_messages))
 
-
 async def handle_url(url, message):
     """Handle individual URLs to process and send media."""
     logger.debug("✨ Handle individual URL: %s", url)
@@ -204,8 +203,9 @@ async def handle_url(url, message):
 
             mp4_file_link = f"https://{BASE_URL}/{sanitize_subfolder_name(sanitized_url)}/{sanitize_subfolder_name(sanitized_url)}.mp4"
             await message.reply(
-                f"Download or watch the media from this link:\n{mp4_file_link}\n"
-                f"Original URL: {original_sanitized_url}\n"
+                f"[⏬ Download\n⏯️ Watch]({mp4_file_link})\n\n"
+                f"[📎 Original]({original_sanitized_url})\n",
+                parse_mode=types.ParseMode.MARKDOWN
             )
         else:
             await message.reply(
@@ -225,8 +225,9 @@ async def handle_url(url, message):
 
             mp4_file_link = f"https://{BASE_URL}/{sanitize_subfolder_name(sanitized_url)}/{sanitize_subfolder_name(sanitized_url)}.mp4"
             await message.reply(
-                f"Download or watch the media from this link:\n{mp4_file_link}\n"
-                f"Original URL: {original_sanitized_url}\n"
+                f"[⏬ Download\n⏯️ Watch]({mp4_file_link})\n\n"
+                f"[📎 Original]({original_sanitized_url})\n",
+                parse_mode=types.ParseMode.MARKDOWN
             )
         else:
             await message.reply(
