@@ -1,6 +1,6 @@
 FROM python:3.11-buster
 ARG POETRY_VERSION=1.8.2
-RUN pip install poetry==${POETRY_VERSION}
+RUN pip install --no-cache-dir poetry==${POETRY_VERSION}
 
 COPY \
   pyproject.toml \
