@@ -7,12 +7,12 @@ on:
   - pull_request
 
 jobs:
-  lint-python-ruff:
+  lint-python-black:
     runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
       - uses: psf/black@stable
         with:
-          options: "--check --verbose"
           src: "./bot"
+          options: "--check --verbose"
