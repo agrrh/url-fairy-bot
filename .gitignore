@@ -1,8 +1,14 @@
+__pycache__
 .*
 *.pyc
-!.gitignore
+*.zip
 !.github
+!.gitignore
 !.markdownlint.yaml
 !.pre-commit-config.yaml
+bin
 dist
+lib
+pyvenv.cfg
+share
 *.pyc

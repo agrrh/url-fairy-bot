@@ -1,9 +1,12 @@
+# build-and-push.yml
+
 name: Build and Push Docker Image
 
 on:
   push:
     branches:
       - main
+      # - 2.0
   release:
     types:
       - created
@@ -53,10 +56,9 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
-          context: ./bot/
-          file: ./bot/Dockerfile
-          # platforms: linux/amd64
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/386
+          context: ./
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm,linux/arm64
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/url-fairy-bot:latest
