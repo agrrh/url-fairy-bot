@@ -32,6 +32,7 @@ Prepare for a magical journey as you set up and deploy the URLFairyBot.
 
    ```dotenv
    BOT_TOKEN=your_bot_token
+   BOT_ID=your_bot_id
    BASE_URL=your_base_url
    ```
 

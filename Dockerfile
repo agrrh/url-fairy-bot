@@ -16,7 +16,7 @@ RUN apt-get update \
 WORKDIR /app
 
 # Copy only dependency files first to leverage Docker cache for dependencies
-COPY ./pyproject.toml ./poetry.lock /app/
+COPY ./pyproject.toml ./poetry.lock ./
 
 # Install dependencies, skipping development dependencies
 RUN poetry config virtualenvs.create false \
@@ -24,7 +24,7 @@ RUN poetry config virtualenvs.create false \
     && rm -rf /root/.cache/pypoetry
 
 # Copy the application code after installing dependencies to avoid rebuilding layers
-COPY ./app /app/app
+COPY ./app/ ./
 COPY entrypoint.sh /
 
 # Set cache volume

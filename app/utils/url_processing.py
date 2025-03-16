@@ -1,23 +1,20 @@
-# url_processing.py
-
 import logging
 import os
 import re
-from urllib.parse import urlparse, urlunparse
-
 import requests
 
-from app.config import settings
+from urllib.parse import urlparse, urlunparse
 
-from .download import UnsupportedUrlError, yt_dlp_download
+from .app.config import config
+from .utils.download import UnsupportedUrlError, yt_dlp_download
 
 logger = logging.getLogger(__name__)
 
 
 def is_domain_allowed(url: str) -> bool:
     allowed_domains = (
-        settings.DOWNLOAD_ALLOWED_DOMAINS.split(",")
-        if settings.DOWNLOAD_ALLOWED_DOMAINS
+        config.DOWNLOAD_ALLOWED_DOMAINS.split(",")
+        if config.DOWNLOAD_ALLOWED_DOMAINS
         else []
     )
     domain = urlparse(url).netloc
@@ -35,11 +32,14 @@ def is_domain_allowed(url: str) -> bool:
     return False
 
 
-def follow_redirects(url: str, timeout=settings.FOLLOW_REDIRECT_TIMEOUT) -> str:
+def follow_redirects(url: str, timeout=config.FOLLOW_REDIRECT_TIMEOUT) -> str:
     try:
         response = requests.head(url, allow_redirects=True, timeout=timeout)
         redirected_url = urlunparse(urlparse(response.url)._replace(query=""))
-        if not urlparse(redirected_url).scheme or not urlparse(redirected_url).netloc:
+        if (
+            not urlparse(redirected_url).scheme
+            or not urlparse(redirected_url).netloc
+        ):
             logger.warning(f"Invalid redirect URL: {redirected_url}")
             return url
         return redirected_url
@@ -87,7 +87,7 @@ async def attempt_download(final_url: str) -> str:
         video_os_path = await yt_dlp_download(final_url)
         if video_os_path:
             video_path = os.path.join(*video_os_path.split(os.path.sep)[-1:])
-            return f"[⏯️ Watch or ⏬ Download](https://{settings.BASE_URL}/{video_path})\n\n[📎]({final_url})"
+            return f"[⏯️ Watch or ⏬ Download](https://{config.BASE_URL}/{video_path})\n\n[📎]({final_url})"
     except UnsupportedUrlError:
         raise
     except Exception as e:
@@ -140,7 +140,9 @@ async def process_url_request(url: str, is_group_chat: bool = False) -> str:
 
         # Check if modified URL is the same as the original
         if modified_url == final_url and is_group_chat:
-            return None  # Silent response for unmodified URLs in group/supergroup
+            return (
+                None  # Silent response for unmodified URLs in group/supergroup
+            )
 
         return (
             "Here is an alternative link, which Telegram may parse better: "
@@ -153,7 +155,9 @@ async def process_url_request(url: str, is_group_chat: bool = False) -> str:
 
         # Check if modified URL is the same as the original
         if modified_url == final_url and is_group_chat:
-            return None  # Silent response for unmodified URLs in group/supergroup
+            return (
+                None  # Silent response for unmodified URLs in group/supergroup
+            )
 
         return (
             "Here is an alternative link, which Telegram may parse better: "

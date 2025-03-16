@@ -1,12 +1,9 @@
-# download.py
-# -*- coding: utf-8 -*-
-
 import logging
 import os
 
 import yt_dlp
 
-from app.config import settings
+from .app.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +15,9 @@ class UnsupportedUrlError(Exception):
 
 
 async def yt_dlp_download(url: str) -> str:
-    video_path = os.path.join(settings.CACHE_DIR, f"{sanitize_subfolder_name(url)}.mp4")
+    video_path = os.path.join(
+        config.CACHE_DIR, f"{sanitize_subfolder_name(url)}.mp4"
+    )
 
     if os.path.exists(video_path):
         logger.info(f"File already exists for URL: {url}, skipping download.")

@@ -1,25 +1,18 @@
-# main.py
-# -*- coding: utf-8 -*-
-
 import asyncio
 import logging
 
 from fastapi import FastAPI
 
-from app.config import settings
+from .config import config
 
 from .api import api_router
-from .bot import dp  # Import the dispatcher directly
+from .bot import dp
 
-# Initialize FastAPI app
-app = FastAPI()
-
-# Add router
-app.include_router(api_router)
-
-# Logging configuration
-logging.basicConfig(level=settings.LOG_LEVEL)
+logging.basicConfig(level=config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
+
+app = FastAPI()
+app.include_router(api_router)
 
 
 @app.on_event("startup")
